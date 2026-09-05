@@ -16,15 +16,33 @@ import { createPlatformClient } from "./platform";
 import type { StatusResult } from "./platform";
 import { toPlatform } from "./to-platform";
 
-export async function savePlatformCredentials(data: unknown) {
-  const { apiKey } = parseCredentialInput(data);
-  const jar = await cookies();
-  jar.set(PLATFORM_KEY_COOKIE, encodeCredentials(apiKey), PLATFORM_KEY_COOKIE_OPTIONS);
+type CredentialActionResult = { ok: true } | { ok: false; error: string };
+
+export async function savePlatformCredentials(data: unknown): Promise<CredentialActionResult> {
+  try {
+    const { apiKey } = parseCredentialInput(data);
+    const jar = await cookies();
+    jar.set(PLATFORM_KEY_COOKIE, encodeCredentials(apiKey), PLATFORM_KEY_COOKIE_OPTIONS);
+    return { ok: true };
+  } catch (caught) {
+    if (caught instanceof Error && caught.message === "Enter an API key") {
+      return { ok: false, error: caught.message };
+    }
+    if (caught instanceof Error && caught.message === "API key must be id:secret") {
+      return { ok: false, error: caught.message };
+    }
+    return { ok: false, error: "Could not save the API key" };
+  }
 }
 
-export async function clearPlatformCredentials() {
-  const jar = await cookies();
-  jar.set(PLATFORM_KEY_COOKIE, "", { ...PLATFORM_KEY_COOKIE_OPTIONS, maxAge: 0 });
+export async function clearPlatformCredentials(): Promise<CredentialActionResult> {
+  try {
+    const jar = await cookies();
+    jar.set(PLATFORM_KEY_COOKIE, "", { ...PLATFORM_KEY_COOKIE_OPTIONS, maxAge: 0 });
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not remove the API key" };
+  }
 }
 
 export async function hasPlatformCredentials() {

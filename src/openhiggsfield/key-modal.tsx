@@ -30,13 +30,24 @@ export function KeyModal({
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    const trimmed = apiKey.trim();
+    const colon = trimmed.indexOf(":");
+    if (colon <= 0 || colon === trimmed.length - 1) {
+      setError("API key must be id:secret");
+      return;
+    }
+
     setBusy(true);
     setError(null);
     try {
-      await savePlatformCredentials({ api_key: apiKey });
+      const result = await savePlatformCredentials({ api_key: trimmed });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       onSaved();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not save the key");
+    } catch {
+      setError("Could not save the API key");
     } finally {
       setBusy(false);
     }
@@ -46,11 +57,15 @@ export function KeyModal({
     setBusy(true);
     setError(null);
     try {
-      await clearPlatformCredentials();
+      const result = await clearPlatformCredentials();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       setApiKey("");
       onCleared();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not remove the key");
+    } catch {
+      setError("Could not remove the API key");
     } finally {
       setBusy(false);
     }
